@@ -23,25 +23,12 @@ Please also list any relevant details for your test configuration
 
 #### Versioning
 - [ ] `Changelog` has been updated
-- [ ] Version updated on `package.json`
-
-#### PR Etiquette
-- [ ] My Pr title Starts with the JIRA ticket Number in the following format "[xxx-nn]"
-- [ ] I've added labels to my PR to describe the change.
 
 #### Sanity
 - [ ] I have performed a self-review of my own code
 - [ ] I have added necessary documentation (if appropriate)
 - [ ] Any dependent changes have been merged and published in downstream modules
 
-#### Testing
-- [ ] Linting passing locally
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] Unit testing passing locally
-- [ ] Integration tests & End to End tests are passing
-
-#### Code Quality
-- [ ] Errors and handled and Logged
-- [ ] Types added to all method signatures and parameters
-- [ ] I have commented on my code, particularly in hard-to-understand areas
+#### Quality
+- [ ] CFN-Lint passing locally
 - [ ] Sonar analysis is passing
