@@ -1,0 +1,277 @@
+Description: AWS CodePipeline to Publish to AWS SAR
+
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterLabels:
+      RepoOwner:
+        default: Repo Owner
+      RepoName:
+        default: Repo Name
+      SourceBranch:
+        default: Source Branch
+      GitHubTokenSSMParam:
+        default: GitHub Token SSM Parameter Key
+      EnableWebhooks:
+        default: Enable Webhooks
+      BuildSpecPath:
+        default: Build Spec Path
+    ParameterGroups:
+      - Label:
+          default: Repo Settings
+        Parameters:
+          - RepoOwner
+          - RepoName
+          - SourceBranch
+      - Label:
+          default: Build Settings
+        Parameters:
+          - EnableWebhooks
+          - BuildSpecPath
+      - Label:
+          default: Parameter Store References (Do Not Change!)
+        Parameters:
+          - GitHubTokenSSMParam
+
+
+Parameters:
+
+  GitHubTokenSSMParam:
+    Description: A GitHub OAuth token with appropriate repository scopes
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /github/rw/id
+    NoEcho: true
+
+  RepoOwner:
+    Default: xavier-thomas
+    Description: The owner of the repo to deploy
+    Type: String
+
+  RepoName:
+    Default: aws-codepipeline-waiter
+    Description: The name of the repo to deploy
+    Type: String
+
+  SourceBranch:
+    Default: master
+    Description: The branch of the repo to deploy
+    Type: String
+
+  BuildSpecPath:
+    Description: The Path to the Deploy Buildspec file in the Repo
+    Type: String
+    Default: codebuild/publish-buildspec.yml
+
+  EnableWebhooks:
+    Description: Enable or Disable webhooks for pipelines. This set's the pipeline to be automated or manually triggered
+    Type: String
+    AllowedValues:
+      - true
+      - false
+    Default: true
+
+
+Conditions:
+  cIsEnableWebhooks: !Equals [!Ref EnableWebhooks, true]
+  cIsBuildSpecPathDefined: !Not [!Equals [!Ref BuildSpecPath, ""]]
+
+
+Resources:
+
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${RepoName}-${SourceBranch}-${AWS::Region}-CodeBuildRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [codebuild.amazonaws.com]
+            Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+        - PolicyName: !Sub '${RepoName}-${SourceBranch}-${AWS::Region}-CodeBuildPolicy'
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetBucketPolicy
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub
+                      - 'arn:aws:s3:::${BucketName}'
+                      - BucketName: !ImportValue PipelineArtifactBucket
+                  - !Sub
+                      - 'arn:aws:s3:::${BucketName}/*'
+                      - BucketName: !ImportValue PipelineArtifactBucket
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:CreateLogGroup
+                Resource:
+                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/codebuild-sar-publish-*:log-stream'
+                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/codebuild-sar-publish-*:log-stream:*'
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - serverlessrepo:*
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - iam:ListPolicies
+                  - codebuild:CreateReportGroup
+                  - codebuild:CreateReport
+                  - codebuild:UpdateReport
+                  - codebuild:BatchPutTestCases
+                Resource: '*'
+
+  CodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${RepoName}-${SourceBranch}-${AWS::Region}-PipelineRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [codepipeline.amazonaws.com]
+            Action: ['sts:AssumeRole']
+      Policies:
+        - PolicyName: !Sub '${RepoName}-${SourceBranch}-${AWS::Region}-PipelinePolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:DeleteObject
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:ListBucket
+                  - s3:PutObject
+                  - s3:GetBucketPolicy
+                Resource:
+                  - !Sub
+                      - 'arn:aws:s3:::${BucketName}'
+                      - BucketName: !ImportValue PipelineArtifactBucket
+                  - !Sub
+                      - 'arn:aws:s3:::${BucketName}/*'
+                      - BucketName: !ImportValue PipelineArtifactBucket
+              - Effect: Allow
+                Action:
+                  - codebuild:StartBuild
+                  - codebuild:BatchGetBuilds
+                Resource:
+                  - !GetAtt CodeBuild.Arn
+
+  CodeBuild:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:4.0
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+          - Name: ARTIFACT_BUCKET
+            Value: !ImportValue PipelineArtifactBucket
+          - Name: RepoOwner
+            Value: !Ref RepoOwner
+          - Name: RepoName
+            Value: !Ref RepoName
+      Name: !Sub "codebuild-sar-publish-${RepoName}-${SourceBranch}"
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Source:
+        BuildSpec: !If
+          # If the buildspec path is not defined as a parameter
+          # default to buildspec.yml in the root folder
+          - cIsBuildSpecPathDefined
+          - !Ref BuildSpecPath
+          - buildspec.yml
+        Type: CODEPIPELINE
+
+  # !!! GitHub WebHook trigger !!!
+  ## WebHooks can be configured with your favourite source control provider to instantaneously trigger
+  ## CodePipeline executions whenever the source code changes on your branch
+  ## As an alternative to Webhooks, polling can be enabled instead, directly on the source stage of the pipeline
+  PipelineWebHook:
+    Type: AWS::CodePipeline::Webhook
+    Condition: cIsEnableWebhooks
+    Properties:
+      Authentication: GITHUB_HMAC
+      AuthenticationConfiguration:
+        ## Ensure that your OAuth token is stored securely in AWS Parameter Store or Secrets Manager
+        ## We use a Dynamic Reference to Secrets Manager https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html
+        ## Since Secure Strings are not supported by Cloudformation Parameters or Dynamic References we choose to use secrets manager instead
+        SecretToken: !Ref GitHubTokenSSMParam
+      Filters:
+        - JsonPath: '$.ref'
+          MatchEquals: refs/heads/{Branch}
+      Name: !Sub '${RepoName}-${SourceBranch}-${AWS::Region}-pipeline-webhook'
+      RegisterWithThirdParty: true
+      TargetAction: PackageClientCode
+      TargetPipeline: !Ref DeploymentPipeline
+      TargetPipelineVersion: !GetAtt DeploymentPipeline.Version
+  # ¡¡¡ GitHub WebHook trigger  ¡¡¡
+
+  # !!! Deployment CI/CD pipeline !!!
+  DeploymentPipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      ArtifactStore:
+        Location: !ImportValue PipelineArtifactBucket
+        Type: S3
+      Name: !Sub '${RepoName}-${SourceBranch}-${AWS::Region}-Pipeline'
+      RestartExecutionOnUpdate: true
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      Stages:
+
+        ## First stage within CodePipeline must always be "Source", GitHub, in this instance
+        - Name: Source
+          Actions:
+            - Name: PackageCode
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: '1'
+                Provider: GitHub
+              OutputArtifacts:
+                - Name: SourceOutput
+              Configuration:
+                Owner: !Ref RepoOwner
+                Repo: !Ref RepoName
+                Branch: !Ref SourceBranch
+                PollForSourceChanges: false
+                OAuthToken: !Ref GitHubTokenSSMParam
+
+        ## Build stage using the CodeBuild containers defined above
+        - Name: SAR-Publish
+          Actions:
+            - Name: SAR-Publish
+              InputArtifacts:
+                - Name: SourceOutput
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: '1'
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuild
+              RunOrder: 1
+
+
+Outputs:
+
+  # !!! Stack outputs !!!
+  ## (Optional) outputs to provide quick access to your CI/CD pipeline from the CloudFormation console
+  PipelineUrl:
+    Value: !Sub 'https://console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${DeploymentPipeline}'
+  # ¡¡¡ Stack outputs ¡¡¡
