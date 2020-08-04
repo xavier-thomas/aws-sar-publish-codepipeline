@@ -36,8 +36,8 @@ This repository contains an AWS Cloudformation template to create an AWS CodePip
    * **Note: This only needs to be done once per AWS Account, per Region. All subsequent pipelines are set up to use the same artefact bucket and parameter**
 2. Pass in the Following Parameters.
 	- `GitHubOAuthToken`        <-- This is your GitHub token which is stored in AWS SSM Parameter Store and read by the pipeline
-2. From the AWS Console / CLI deploy the **[sar-publish-pipeline.yaml](./codepipeline/sar-publish-pipeline.yaml)**
-3. Pass in the following Parameters
+3. From the AWS Console / CLI deploy the **[sar-publish-pipeline.yaml](./codepipeline/sar-publish-pipeline.yaml)**
+4. Pass in the following Parameters
 	- Repository Settings
 		- `RepoOwner`           <-- The Owner of the GitHub Repository. i.e. Your Github Organization ID / User ID.
 		- `RepoName`            <-- The Name of the GitHub Repository.
@@ -48,6 +48,7 @@ This repository contains an AWS Cloudformation template to create an AWS CodePip
 		                            The **[example-publish-buildspec.yml](./example-publish-buildspec.yml)** can be used as a template for the buildspec in your repo.
 	- Parameter Store References (Do Not Change!)
 		- `GitHubTokenSSMParam` <-- Leave this to default of `/github/rw/id`. Used to read the value from Parameter Store.
+5. The Check the CodePipeline to ensure that it's set up and running. A quick link to the pipeline can be found in the CloudFormation Stack outputs.
 
 
 ## Authors

@@ -187,6 +187,8 @@ Resources:
             Value: !Ref RepoOwner
           - Name: RepoName
             Value: !Ref RepoName
+          - Name: DEPLOYED_ACCOUNT_ID
+            Value: !Ref AWS::AccountId
       Name: !Sub "codebuild-sar-publish-${RepoName}-${SourceBranch}"
       ServiceRole: !GetAtt CodeBuildServiceRole.Arn
       Source:
@@ -217,7 +219,7 @@ Resources:
           MatchEquals: refs/heads/{Branch}
       Name: !Sub '${RepoName}-${SourceBranch}-${AWS::Region}-pipeline-webhook'
       RegisterWithThirdParty: true
-      TargetAction: PackageClientCode
+      TargetAction: PackageCode
       TargetPipeline: !Ref DeploymentPipeline
       TargetPipelineVersion: !GetAtt DeploymentPipeline.Version
   # ¡¡¡ GitHub WebHook trigger  ¡¡¡

@@ -39,11 +39,15 @@ phases:
       - sam build
       - cd .aws-sam/build/
       - echo "Package Serverless Application"
-      - sam package --s3-bucket ${ARTIFACT_BUCKET} --template-file template.yaml --output-template-file ../../packaged-template.yml --s3-prefix "example sar app name"
+      - sam package --s3-bucket ${ARTIFACT_BUCKET} --template-file template.yaml --output-template-file ../../packaged-template.yml --s3-prefix "example-sar-app-name"
 
   post_build:
     commands:
       - sam publish --template packaged-template.yml
+      - aws serverlessrepo put-application-policy
+          --region ${AWS_REGION}
+          --application-id arn:aws:serverlessrepo:${AWS_REGION}:${DEPLOYED_ACCOUNT_ID}:applications/example-sar-app-name
+          --statements Principals='*',Actions=Deploy
     finally:
       # Post Build Phase's Finally always runs even if the Build Phase is failing
       # If the build is successful continue
