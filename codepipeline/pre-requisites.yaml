@@ -1,0 +1,103 @@
+Description: The pre-requsites for the sar pipeline
+
+
+Parameters:
+  GitHubOAuthToken:
+    Description: A GitHub OAuth token with appropriate repository scopes
+    NoEcho: true
+    Type: String
+
+
+Resources:
+
+  ### The GitHub token taken from Parameter Store Secure String and then stored in Parameter Store as a String
+  ### This is needed to pass these values to downstream modules that cannot look up secure string parameters
+
+  GitHubTokenParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /github/rw/id
+      Type: String
+      Value: !Ref GitHubOAuthToken
+
+
+ ### Bucket and policy for holding all the Pipeline Artefacts
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::AccountId}-${AWS::Region}-pipeline-artifacts"
+      LifecycleConfiguration:
+        Rules:
+          - Status: Enabled
+            Transitions:
+              - StorageClass: ONEZONE_IA
+                TransitionInDays: 30
+            #TODO: Expire only feature artefacts but allow release / master artefacts to exist for a longer time.
+
+  ArtifactBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ArtifactBucket
+      PolicyDocument:
+        Statement:
+           # Allow Cloudformation to manage the bucket
+          - Effect: Allow
+            Action:
+              - s3:*
+            Resource:
+              - !Sub "arn:aws:s3:::${ArtifactBucket}"
+              - !Sub "arn:aws:s3:::${ArtifactBucket}/*"
+            Principal:
+              Service: cloudformation.amazonaws.com
+           # Allow CodePipeline to Write to the Bucket.
+          - Effect: Allow
+            Action:
+              - s3:DeleteObject
+              - s3:GetObject
+              - s3:GetObjectVersion
+              - s3:ListBucket
+              - s3:PutObject
+            Resource:
+              - !Sub "arn:aws:s3:::${ArtifactBucket}"
+              - !Sub "arn:aws:s3:::${ArtifactBucket}/*"
+            Principal:
+              Service: codepipeline.amazonaws.com
+           # Allow all other services in this account read access to the bucket.
+           # i.e. CodeBuild, SAR, etc...
+          - Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+              - s3:ListBucket
+            Effect: Allow
+            Principal:
+              AWS: !Sub ${AWS::AccountId}
+            Resource:
+              - !Sub "arn:aws:s3:::${ArtifactBucket}"
+              - !Sub "arn:aws:s3:::${ArtifactBucket}/*"
+          - Action:
+              - s3:PutObject
+            Effect: Deny
+            Resource:
+              - !Sub "arn:aws:s3:::${ArtifactBucket}"
+              - !Sub "arn:aws:s3:::${ArtifactBucket}/*"
+            Principal: "*"
+            Condition:
+              'Null':
+                s3:x-amz-server-side-encryption: true
+          - Action:
+              - s3:*
+            Effect: Deny
+            Resource:
+              - !Sub "arn:aws:s3:::${ArtifactBucket}"
+              - !Sub "arn:aws:s3:::${ArtifactBucket}/*"
+            Principal: "*"
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+
+
+Outputs:
+  PipelineArtifactBucket:
+    Export:
+      Name: PipelineArtifactBucket
+    Value: !Ref ArtifactBucket
