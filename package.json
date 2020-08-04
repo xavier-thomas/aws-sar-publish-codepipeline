@@ -1,0 +1,16 @@
+{
+    "name": "repository-template",
+    "version": "1.0.0",
+    "description": "A template repository with preferential defaults which can be used to initialise other repositories",
+    "main": "",
+    "scripts": {
+      "test": "jest --config=jest.config.json"
+    },
+    "keywords": [
+      "template",
+      "github",
+      "repository-pattern"
+    ],
+    "author": "Xavier Thomas",
+    "license": "BSD-3-Clause"
+}

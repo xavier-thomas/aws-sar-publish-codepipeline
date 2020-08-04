@@ -1,0 +1,6 @@
+{
+	"coverageDirectory": "../coverage",
+	"collectCoverage": true,
+	"rootDir": "./src",
+	"verbose": true
+}
