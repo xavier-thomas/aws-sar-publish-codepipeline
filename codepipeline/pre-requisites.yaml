@@ -62,8 +62,18 @@ Resources:
               - !Sub "arn:aws:s3:::${ArtifactBucket}/*"
             Principal:
               Service: codepipeline.amazonaws.com
-           # Allow all other services in this account read access to the bucket.
-           # i.e. CodeBuild, SAR, etc...
+           # Allow SAR to read from the bucket
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+              - s3:ListBucket
+            Resource:
+              - !Sub "arn:aws:s3:::${ArtifactBucket}"
+              - !Sub "arn:aws:s3:::${ArtifactBucket}/*"
+            Principal:
+              Service: serverlessrepo.amazonaws.com
+           # Allow users in this account read access to the bucket.
           - Action:
               - s3:GetObject
               - s3:GetObjectVersion
