@@ -181,8 +181,12 @@ Resources:
         Image: aws/codebuild/standard:4.0
         Type: LINUX_CONTAINER
         EnvironmentVariables:
-          - Name: S3_BUCKET
+          - Name: ARTIFACT_BUCKET
             Value: !ImportValue PipelineArtifactBucket
+          - Name: RepoOwner
+            Value: !Ref RepoOwner
+          - Name: RepoName
+            Value: !Ref RepoName
       Name: !Sub "codebuild-sar-publish-${RepoName}-${SourceBranch}"
       ServiceRole: !GetAtt CodeBuildServiceRole.Arn
       Source:
