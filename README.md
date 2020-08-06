@@ -1,6 +1,5 @@
 <h1 align="center">AWS CodePipeline to Publish to AWS SAR</h1>
 
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=xavier-thomas_aws-sar-publish-codepipeline&metric=alert_status)](https://sonarcloud.io/dashboard?id=xavier-thomas_aws-sar-publish-codepipeline)
 ![Tests](https://github.com/xavier-thomas/aws-sar-publish-codepipeline/workflows/Tests/badge.svg)
 
 <p align="center">
