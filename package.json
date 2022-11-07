@@ -1,0 +1,7 @@
+{
+  "name": "aws-sar-publish-codepipeline",
+  "version": "1.0.1",
+  "description": "AWS CodePipeline Template to Publish to AWS SAR",
+  "author": "Xavier Thomas",
+  "license": "BSD-3-Clause"
+}

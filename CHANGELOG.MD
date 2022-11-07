@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 # <<<----- ADD NEW VERSIONS HERE
 
 
+## 🚀 1.0.1 - (August 04, 2020)
+### Added
+- Setup Repository.
+- Added Pipeline Template.
+- Added Workflow for linting etc.
+
 ## 🚀 1.0.0 - (August 04, 2020)
 ### Added
 - Setup Repository.
