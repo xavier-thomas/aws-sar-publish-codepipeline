@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 # <<<----- ADD NEW VERSIONS HERE
 
+## 1.1.0 - (October 27, 2023)
+### Added
+- Upgrade to Node18 runtime
+- Upgrade to Ubuntu standard:7.0 build image
+- dependency update
 
 ## 🚀 1.0.1 - (August 04, 2020)
 ### Added

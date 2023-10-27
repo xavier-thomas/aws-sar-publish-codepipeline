@@ -23,6 +23,7 @@ Please also list any relevant details for your test configuration
 
 #### Versioning
 - [ ] `Changelog` has been updated
+- [ ] version updated in `package.json`
 
 #### Sanity
 - [ ] I have performed a self-review of my own code
